@@ -33,24 +33,42 @@ const renderCountry = function (country, className = '') {
   countriesContainer.style.opacity = 1;
 };
 
+const renderError = function (msg) {
+  countriesContainer.style.opacity = 1;
+  countriesContainer.insertAdjacentText('beforeend', msg);
+};
+
 const getCountryAndNeighbors = function (country) {
   //creating the request
   fetch(`https://restcountries.eu/rest/v2/name/${country}`)
-    .then(data => data.json())
+    .then(data => {
+      //handling error if country not found
+      if (!data.ok) {
+        throw new Error('Country not found');
+      }
+
+      return data.json();
+    })
     .then(data => {
       //rendering the main country
+
       renderCountry(data[0]);
 
       //getting its neighbours
       const neighbours = data[0].borders;
 
-      if (!neighbours) return;
+      if (neighbours.length === 0) return;
 
       //chaining the result to the next then
       return neighbours;
     })
+    .catch(err => renderError(err.message)) // if user loses connection or error
     .then(data => {
       //looping throught the neighbours
+      if (!data) {
+        throw new Error(`No neighbours`);
+      }
+
       for (let neighbour of data) {
         //calling the data for each neighbour
         fetch(`https://restcountries.eu/rest/v2/alpha/${neighbour}`)
@@ -62,10 +80,9 @@ const getCountryAndNeighbors = function (country) {
             renderCountry(data, 'neighbour');
           });
       }
-    });
+    })
+    .catch(err => renderError(err.message));
 };
-
-getCountryAndNeighbors('usa');
 
 // //Experiment to see the promise changing
 // const reqPromise = fetch('https://restcountries.eu/rest/v2/name/brazil');
@@ -74,10 +91,30 @@ getCountryAndNeighbors('usa');
 //   console.log(reqPromise);
 // }, 8000);
 
-//Lecture 248
+const whereAmI = function () {
+  if (!navigator.geolocation) return 'Not able to run';
 
-/* Working through promises */
+  navigator.geolocation.getCurrentPosition(function (pos) {
+    const lat = pos.coords.latitude;
+    const lon = pos.coords.longitude;
+    const url = `https://geocode.xyz/${lat},${lon}?geoit=json`;
 
-const req = fetch('https://restcountries.eu/rest/v2/name/brazil')
-  .then(resp => resp.json()) // after the resp is delivered, we concert to JSON
-  .then(resp => console.log(resp)); // after the JSON is ready, we can use
+    fetch(url)
+      .then(data => {
+        if (!data.ok) {
+          throw new Error('Country not found');
+        }
+        return data.json();
+      })
+      .then(data => {
+        let country = data.country;
+        console.log(`You are in ${data.city}, ${country}`);
+        getCountryAndNeighbors(country);
+      })
+      .catch(err => alert(err.message));
+  });
+};
+
+btn.addEventListener('click', function () {
+  whereAmI();
+});
