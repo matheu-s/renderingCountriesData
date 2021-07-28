@@ -84,37 +84,155 @@ const getCountryAndNeighbors = function (country) {
     .catch(err => renderError(err.message));
 };
 
+const getPosition = function () {
+  return new Promise(function (resolve, reject) {
+    // resolve for success, reject for error, its the same in both objects
+    navigator.geolocation.getCurrentPosition(resolve, reject);
+  });
+};
+
+const whereAmI = async function () {
+  //check if browser has geo
+  if (!navigator.geolocation) return 'Not able to run';
+
+  //get coordinates
+  const position = await getPosition();
+
+  const lat = position.coords.latitude;
+  const lon = position.coords.longitude;
+
+  //get the location based on coordinates
+  const res = await fetch(`https://geocode.xyz/${lat},${lon}?geoit=json`);
+  console.log(res);
+
+  //check if worked
+  if (!res.ok) {
+    console.log(res);
+    return new Error('Not found');
+  }
+
+  //transform to json
+  const data = await res.json();
+
+  //call the other method to complement the UI
+  const country = data.country;
+  console.log(`You are in ${data.city}, ${country}`);
+
+  getCountryAndNeighbors(country);
+};
+
+btn.addEventListener('click', whereAmI);
+
+/* training to create own Promise */
+
+//Useful to store values that depends of async operations
+
+// const myPromise = new Promise(function (resolve, reject) {
+//   if (navigator.geolocation) {
+//     navigator.geolocation.getCurrentPosition(function (pos) {
+//       const lat = pos.coords.latitude;
+//       const lon = pos.coords.longitude;
+
+//       const cordinates = [lat, lon];
+
+//       resolve(cordinates);
+//     });
+//   } else {
+//     reject(new Error('Not able to run Geo'));
+//   }
+// });
+
+// myPromise.then(x => console.log(x)).catch(x => console.error(x));
+
+// //simply to pause the execution chain
+// const wait = function (seconds) {
+//   return new Promise(function (resolve) {
+//     setTimeout(resolve, seconds * 1000);
+//   });
+// };
+
+// const imgContainer = document.querySelector('.images');
+
+// const createImageFromAPI = function () {
+//   return new Promise(function (resolve, reject) {
+//     fetch('https://source.unsplash.com/1600x900/?beach')
+//       .then(x => {
+//         document.createElement('img');
+//         let image = document.createElement('img');
+//         image.src = x.url;
+
+//         image.addEventListener('load', function () {
+//           imgContainer.append(image);
+//           resolve(image);
+//         });
+
+//         image.addEventListener('error', function () {
+//           reject(new Error('Fail to load the image'));
+//         });
+
+//         return image.url;
+//       })
+//       .catch(x => console.log(x));
+//   });
+// };
+
+// let currentImage;
+
+// createImageFromAPI()
+//   .then(img => {
+//     currentImage = img;
+//     console.log('img will disappear in 2 seconds');
+//     return wait(2);
+//   })
+//   .then(() => {
+//     currentImage.style.display = 'none';
+//     return wait(3);
+//   })
+//   .then(() => {
+//     createImageFromAPI()
+//       .then(img => {
+//         currentImage = img;
+//         console.log('Pause for 5 seconds to admire this img ;)');
+//         return wait(5);
+//       })
+//       .then(() => {
+//         currentImage.style.display = 'none';
+//         console.log('goodbye');
+//       });
+//   })
+//   .catch(x => console.error(x + ' :('));
+
+// //same but wihout API, just direct from folder
+// const createImage = function (imgPath) {
+//   return new Promise(function (resolve, reject) {
+//     let image = document.createElement('img');
+//     image.src = imgPath;
+
+//     image.addEventListener('load', function () {
+//       imgContainer.append(image);
+//       resolve(image);
+//     });
+
+//     image.addEventListener('error', function () {
+//       throw new Error(reject('Fail to load the image'));
+//     });
+//   });
+// };
+
+// const whereAmIASYNC = async function (country) {
+//   //this 'await' kinda block this scope and wait for the response to continue, but dont block all the engine
+//   const resp = await fetch(`https://restcountries.eu/rest/v2/name/${country}`);
+//   console.log(resp);
+//   console.log('hello');
+// };
+
+// console.log('bye');
+
+// whereAmIASYNC('brazil');
+
 // //Experiment to see the promise changing
 // const reqPromise = fetch('https://restcountries.eu/rest/v2/name/brazil');
 // console.log(reqPromise);
 // setTimeout(function () {
 //   console.log(reqPromise);
 // }, 8000);
-
-const whereAmI = function () {
-  if (!navigator.geolocation) return 'Not able to run';
-
-  navigator.geolocation.getCurrentPosition(function (pos) {
-    const lat = pos.coords.latitude;
-    const lon = pos.coords.longitude;
-    const url = `https://geocode.xyz/${lat},${lon}?geoit=json`;
-
-    fetch(url)
-      .then(data => {
-        if (!data.ok) {
-          throw new Error('Country not found');
-        }
-        return data.json();
-      })
-      .then(data => {
-        let country = data.country;
-        console.log(`You are in ${data.city}, ${country}`);
-        getCountryAndNeighbors(country);
-      })
-      .catch(err => alert(err.message));
-  });
-};
-
-btn.addEventListener('click', function () {
-  whereAmI();
-});
